@@ -1,0 +1,6 @@
+@PsswrdMngr.API_HostAddress = http://localhost:5197
+
+GET {{PsswrdMngr.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
