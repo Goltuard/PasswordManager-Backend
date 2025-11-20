@@ -513,6 +513,8 @@ http-client.private.env.json
 .idea/ApifoxUploaderProjectSetting.xml
 
 
+.idea/**
+
 
 # Database
 *.db
