@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using PsswrdMngr.Application.Auth; 
+using PsswrdMngr.Application.Auth;
 using PsswrdMngr.Domain;
 
 namespace PsswrdMngr.Infrastructure.Auth

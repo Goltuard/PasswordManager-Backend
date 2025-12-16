@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PsswrdMngr.Application\PsswrdMngr.Application.csproj" />
+    <ProjectReference Include="..\PsswrdMngr.Infrastructure\PsswrdMngr.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

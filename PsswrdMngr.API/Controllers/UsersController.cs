@@ -1,11 +1,16 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using PsswrdMngr.Domain;
 using PsswrdMngr.Infrastructure;
 
 namespace PsswrdMngr.API.Controllers
 {
-    public class UsersController : BaseApiController
+    [ApiController]
+    [Route("api/[controller]")]
+    public class UsersController : ControllerBase
     {
         private readonly DataContext _context;
 
@@ -14,16 +19,51 @@ namespace PsswrdMngr.API.Controllers
             _context = context;
         }
 
-        [HttpGet] // api/users
-        public async Task<ActionResult<List<User>>> GetUsers()
+        // DTO – to, co wystawiasz na zewnątrz (bez PasswordHash)
+        public class UserDto
         {
-            return await _context.Users.ToListAsync();
+            public Guid Id { get; set; }
+            public string Name { get; set; } = null!;
+            public string PublicKey { get; set; } = null!;
         }
 
-        [HttpGet("{id}")] // api/users/id
-        public async Task<ActionResult<User>> GetUser(Guid id)
+        // GET: /api/Users
+        [HttpGet]
+        public async Task<ActionResult<List<UserDto>>> GetUsers()
         {
-            return await _context.Users.FindAsync(id);
+            var users = await _context.Users
+                .AsNoTracking()
+                .ToListAsync();
+
+            var result = users.Select(u => new UserDto
+            {
+                Id = u.Id,
+                Name = u.Name,
+                PublicKey = u.PublicKey
+            }).ToList();
+
+            return Ok(result);
+        }
+
+        // GET: /api/Users/{id}
+        [HttpGet("{id:guid}")]
+        public async Task<ActionResult<UserDto>> GetUser(Guid id)
+        {
+            var user = await _context.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null)
+                return NotFound();
+
+            var dto = new UserDto
+            {
+                Id = user.Id,
+                Name = user.Name,
+                PublicKey = user.PublicKey
+            };
+
+            return Ok(dto);
         }
     }
 }
