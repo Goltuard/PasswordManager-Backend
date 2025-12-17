@@ -2,7 +2,7 @@ using System;
 
 namespace PsswrdMngr.API.Controllers
 {
-    // Prosty DTO pasujący do encji User
+    
     public class UserDto
     {
         public Guid Id { get; set; }
