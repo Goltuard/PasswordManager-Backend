@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using MediatR;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PsswrdMngr.Application.CredentialContainers;
 using PsswrdMngr.Domain;
 using PsswrdMngr.Infrastructure;
 
@@ -7,17 +9,17 @@ namespace PsswrdMngr.API.Controllers
 {
     public class CredentialContainersController : BaseApiController
     {
-        private readonly DataContext _context;
+        private readonly IMediator _mediator;
 
-        public CredentialContainersController(DataContext context)
+        public CredentialContainersController(IMediator mediator)
         {
-            _context = context;
+            _mediator = mediator;
         }
 
         [HttpGet] // api/credentialcontainer   ??
         public async Task<ActionResult<List<CredentialContainer>>> GetContainers()
         {
-            return await _context.CredentialContainers.ToListAsync();
+            return await _mediator.Send(new List.Query());
         }
 
 

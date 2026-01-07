@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
+using PsswrdMngr.Application.CredentialContainers;
 using PsswrdMngr.Infrastructure;
 using PsswrdMngr.Application.Auth;
 using PsswrdMngr.Infrastructure.Auth;
@@ -12,6 +13,8 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo{Title = "PasswordManager API", Version = "v1"});
 });
+
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(List.Handler).Assembly));
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
