@@ -16,7 +16,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\PsswrdMngr.Domain\PsswrdMngr.Domain.csproj" />
-    <ProjectReference Include="..\PsswrdMngr.Application\PsswrdMngr.Application.csproj" />
   </ItemGroup>
 
 </Project>
