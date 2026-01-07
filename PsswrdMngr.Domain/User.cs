@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.AspNetCore.Identity;
 
 namespace PsswrdMngr.Domain
 {
-    public class User
+    public class User : IdentityUser
     {
-        public Guid Id { get; set; }
-        public string Name { get; set; }
-        public string PasswordHash { get; set; }
+        public Guid UserId { get; set; }
+        public string Password { get; set; }
         public string PublicKey { get; set; }
-
     }
 }

@@ -1,69 +1,89 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PsswrdMngr.API.Dto;
+using PsswrdMngr.API.Services;
+using PsswrdMngr.Domain;
 using PsswrdMngr.Infrastructure;
 
 namespace PsswrdMngr.API.Controllers
 {
+    [AllowAnonymous]
     [ApiController]
     [Route("api/[controller]")]
-    public class UsersController : ControllerBase
+    public class UsersController : BaseApiController
     {
-        private readonly DataContext _context;
+        private readonly UserManager<User> _userManager;
+        private readonly TokenService _tokenService;
 
-        public UsersController(DataContext context)
+        public UsersController(UserManager<User> userManager, TokenService tokenService)
         {
-            _context = context;
+            _userManager = userManager;
+            _tokenService = tokenService;
         }
 
-        // DTO – to, co wystawiasz na zewnątrz (bez PasswordHash)
-        public class UserDto
+        [HttpPost("login")]
+        public async Task<ActionResult<UserDto>> Login(LoginDto loginDto)
         {
-            public Guid Id { get; set; }
-            public string Name { get; set; } = null!;
-            public string PublicKey { get; set; } = null!;
-        }
+            var user = await _userManager.FindByEmailAsync(loginDto.Email);
 
-        // GET: /api/Users
-        [HttpGet]
-        public async Task<ActionResult<List<UserDto>>> GetUsers()
-        {
-            var users = await _context.Users
-                .AsNoTracking()
-                .ToListAsync();
+            if (user == null) return Unauthorized();
 
-            var result = users.Select(u => new UserDto
+            var result = await _userManager.CheckPasswordAsync(user, loginDto.Password);
+
+            if (result)
             {
-                Id = u.Id,
-                Name = u.Name,
-                PublicKey = u.PublicKey
-            }).ToList();
+                Console.WriteLine(user.Id);
+                return new UserDto
+                {
+                    Id = user.UserId,
+                    UserName = user.UserName,
+                    Token = _tokenService.CreateToken(user)
+                };
+            }
 
-            return Ok(result);
+            return Unauthorized();
         }
 
-        // GET: /api/Users/{id}
-        [HttpGet("{id:guid}")]
-        public async Task<ActionResult<UserDto>> GetUser(Guid id)
+        [HttpPost("register")]
+        public async Task<ActionResult<UserDto>> Register(RegisterDto registerDto)
         {
-            var user = await _context.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.Id == id);
-
-            if (user == null)
-                return NotFound();
-
-            var dto = new UserDto
+            if (await _userManager.Users.AnyAsync(x => x.UserName == registerDto.UserName))
             {
-                Id = user.Id,
-                Name = user.Name,
-                PublicKey = user.PublicKey
+                return BadRequest("UserName taken.");
+            }
+
+            var user = new User
+            {
+                UserName = registerDto.UserName,
+                Email = registerDto.Email,
+                Password = registerDto.Password,
+                PublicKey = registerDto.PublicKey,
+                UserId = Guid.NewGuid()
             };
 
-            return Ok(dto);
+            var result = await _userManager.CreateAsync(user, registerDto.Password);
+
+            if (result.Succeeded)
+            {
+                return new UserDto
+                {
+                    Id = user.UserId,
+                    UserName = user.UserName,
+                    Token = _tokenService.CreateToken(user)
+                };
+            }
+            else
+            {
+                foreach (var err in result.Errors)
+                {
+                    Console.WriteLine(err);
+                    Console.WriteLine(err.Description);
+                }
+            }
+
+            return BadRequest("Problem registering");
         }
     }
 }

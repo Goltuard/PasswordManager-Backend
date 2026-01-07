@@ -7,9 +7,12 @@ namespace PsswrdMngr.Application.CredentialContainers;
 
 public class Single
 {
-    public class Query : IRequest<List<CredentialContainer>> {}
+    public class Query : IRequest<CredentialContainer>
+    {
+        public Guid Id { get; set; }
+    }
 
-    public class Handler : IRequestHandler<Query, List<CredentialContainer>>
+    public class Handler : IRequestHandler<Query, CredentialContainer>
     {
         private readonly DataContext _context;
 
@@ -18,9 +21,9 @@ public class Single
             _context = context;
         }
 
-        public async Task<List<CredentialContainer>> Handle(Query request, CancellationToken cancellationToken)
+        public async Task<CredentialContainer> Handle(Query request, CancellationToken cancellationToken)
         {
-            return await _context.CredentialContainers.ToListAsync();
+            return await _context.CredentialContainers.FindAsync(request.Id);
         }
     }
 }

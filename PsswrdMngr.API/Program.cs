@@ -1,12 +1,16 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
+using PsswrdMngr.API.Services;
 using PsswrdMngr.Application.CredentialContainers;
+using PsswrdMngr.Domain;
 using PsswrdMngr.Infrastructure;
-using PsswrdMngr.Application.Auth;
-using PsswrdMngr.Infrastructure.Auth;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add services to the container.
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -16,16 +20,20 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(List.Handler).Assembly));
 
-builder.Services.AddControllers();
+builder.Services.AddIdentityServices(builder.Configuration);
+
+builder.Services.AddControllers(opt =>
+{
+    var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
+    opt.Filters.Add(new AuthorizeFilter(policy));
+});
+// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<DataContext>(opt =>
 {
     opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
-
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddCors(opt =>
 {
@@ -37,6 +45,7 @@ builder.Services.AddCors(opt =>
 
 var app = builder.Build();
 
+// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -50,8 +59,7 @@ app.UseSwaggerUI(option =>
 
 app.UseHttpsRedirection();
 
-app.UseCors("CorsPolicy");
-
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
@@ -62,8 +70,9 @@ var services = scope.ServiceProvider;
 try
 {
     var context = services.GetRequiredService<DataContext>();
-    context.Database.Migrate();
-    Seed.SeedData(context);
+    var userManager = services.GetRequiredService<UserManager<User>>();
+    await context.Database.MigrateAsync();
+    await Seed.SeedData(context, userManager);
 }
 catch (Exception ex)
 {
