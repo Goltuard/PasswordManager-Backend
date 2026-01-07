@@ -7,7 +7,10 @@ namespace PsswrdMngr.Application.CredentialContainers;
 
 public class List
 {
-    public class Query : IRequest<List<CredentialContainer>> {}
+    public class Query : IRequest<List<CredentialContainer>>
+    {
+        public required Guid UserId { get; set; }
+    }
 
     public class Handler : IRequestHandler<Query, List<CredentialContainer>>
     {
@@ -20,7 +23,17 @@ public class List
 
         public async Task<List<CredentialContainer>> Handle(Query request, CancellationToken cancellationToken)
         {
-            return await _context.CredentialContainers.ToListAsync();
+            var allContainers = await _context.CredentialContainers.ToListAsync();
+            List<CredentialContainer> properContainers = new List<CredentialContainer>();
+            foreach (var container in allContainers)
+            {
+                if (container.UserId == request.UserId)
+                {
+                    properContainers.Add(container);
+                }
+            }
+
+            return properContainers;
         }
     }
 }

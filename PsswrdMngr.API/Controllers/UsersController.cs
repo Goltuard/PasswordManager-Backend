@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Runtime.CompilerServices;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +11,6 @@ using PsswrdMngr.Infrastructure;
 
 namespace PsswrdMngr.API.Controllers
 {
-    [AllowAnonymous]
     [ApiController]
     [Route("api/[controller]")]
     public class UsersController : BaseApiController
@@ -23,6 +24,7 @@ namespace PsswrdMngr.API.Controllers
             _tokenService = tokenService;
         }
 
+        [AllowAnonymous]
         [HttpPost("login")]
         public async Task<ActionResult<UserDto>> Login(LoginDto loginDto)
         {
@@ -37,7 +39,7 @@ namespace PsswrdMngr.API.Controllers
                 Console.WriteLine(user.Id);
                 return new UserDto
                 {
-                    Id = user.UserId,
+                    Id = Guid.Parse(user.Id),
                     UserName = user.UserName,
                     Token = _tokenService.CreateToken(user)
                 };
@@ -46,6 +48,7 @@ namespace PsswrdMngr.API.Controllers
             return Unauthorized();
         }
 
+        [AllowAnonymous]
         [HttpPost("register")]
         public async Task<ActionResult<UserDto>> Register(RegisterDto registerDto)
         {
@@ -60,7 +63,6 @@ namespace PsswrdMngr.API.Controllers
                 Email = registerDto.Email,
                 Password = registerDto.Password,
                 PublicKey = registerDto.PublicKey,
-                UserId = Guid.NewGuid()
             };
 
             var result = await _userManager.CreateAsync(user, registerDto.Password);
@@ -69,7 +71,7 @@ namespace PsswrdMngr.API.Controllers
             {
                 return new UserDto
                 {
-                    Id = user.UserId,
+                    Id = Guid.Parse(user.Id),
                     UserName = user.UserName,
                     Token = _tokenService.CreateToken(user)
                 };
@@ -84,6 +86,19 @@ namespace PsswrdMngr.API.Controllers
             }
 
             return BadRequest("Problem registering");
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<ActionResult<UserDto>> GetCurrentUser()
+        {
+            var user = await _userManager.FindByEmailAsync(User.FindFirstValue(ClaimTypes.Email));
+            return new UserDto
+            {
+                UserName = user.UserName,
+                Id = Guid.Parse(user.Id),
+                Token = _tokenService.CreateToken(user)
+            };
         }
     }
 }
