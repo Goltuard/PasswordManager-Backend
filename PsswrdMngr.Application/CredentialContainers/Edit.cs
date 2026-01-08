@@ -9,7 +9,6 @@ public class Edit
     public class Command : IRequest<Unit>
     {
         public required CredentialContainer CredentialContainer { get; set; }
-        public required Guid UserId { get; set; }
     }
 
     public class Handler : IRequestHandler<Command, Unit>
@@ -25,13 +24,10 @@ public class Edit
         {
             var credContainer = await _context.CredentialContainers.FindAsync(request.CredentialContainer.Id);
 
-            if (credContainer.UserId == request.UserId)
-            {
-                credContainer.ContainerHash = request.CredentialContainer.ContainerHash;
-                credContainer.ContainerString = request.CredentialContainer.ContainerString;
+            credContainer.ContainerHash = request.CredentialContainer.ContainerHash;
+            credContainer.ContainerString = request.CredentialContainer.ContainerString;
 
-                await _context.SaveChangesAsync(cancellationToken);
-            }
+            await _context.SaveChangesAsync(cancellationToken);
 
             return Unit.Value;
         }

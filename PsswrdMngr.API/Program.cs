@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi;
 using PsswrdMngr.API.Services;
 using PsswrdMngr.Application.CredentialContainers;
 using PsswrdMngr.Domain;
@@ -10,24 +9,24 @@ using PsswrdMngr.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new OpenApiInfo{Title = "PasswordManager API", Version = "v1"});
-});
+builder.Services.AddSwaggerGen();
 
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(List.Handler).Assembly));
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(List.Handler).Assembly)
+);
 
 builder.Services.AddIdentityServices(builder.Configuration);
 
 builder.Services.AddControllers(opt =>
 {
-    var policy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
+    var policy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+
     opt.Filters.Add(new AuthorizeFilter(policy));
 });
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+
 builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<DataContext>(opt =>
@@ -39,13 +38,18 @@ builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("CorsPolicy", policy =>
     {
-        policy.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin();
+        policy
+            .WithOrigins(
+                "http://localhost:3000",
+                "http://localhost:3001"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod();
     });
 });
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -54,10 +58,12 @@ if (app.Environment.IsDevelopment())
 app.UseSwagger();
 app.UseSwaggerUI(option =>
 {
-    option.SwaggerEndpoint("/swagger/v1/swagger.json","Backend");
+    option.SwaggerEndpoint("/swagger/v1/swagger.json", "Backend");
 });
 
 app.UseHttpsRedirection();
+
+app.UseCors("CorsPolicy");
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -72,7 +78,7 @@ try
     var context = services.GetRequiredService<DataContext>();
     var userManager = services.GetRequiredService<UserManager<User>>();
     await context.Database.MigrateAsync();
-    await Seed.SeedData(context, userManager);
+    // await Seed.SeedData(context, userManager);
 }
 catch (Exception ex)
 {

@@ -24,6 +24,7 @@ namespace PsswrdMngr.Infrastructure
                         // RSA public key of length 1024 with https://cryptotools.net/rsagen 
                         // RSA private key to go with it: MIICWwIBAAKBgG87C72B1cmqa7lpqeJ4Lad3vrcF04CeWsgndHZi3Ryo+V2oxzPAkbtNIQXhEWyU2CJkcd21KS5wJR0OGpp7P/dOMV4WzE9VrNbh3FVyJeN5ACXA8WWw6K/D3622sa1aUdCZXs3Qzr6bUMXuJvL47PEeO4Xch14/ygUEPhrNnqgpAgMBAAECgYBBjar9pOc6UxXp0DwvHGTLrebYNrbPtoQKMjaRDvMBURSl/jJobbV1jZ9It7xtIcu/eTMiVwJOPAmjdgx3vuuTKgOCbD1HRCBoSoJzLgYlfbjBqVYd3/vg+GmPsTlXCTb/Eepmh09mCQCnSF/oFy59YdOqOwGfNfW8vGZf4M6wAQJBAMytZ/cY+JPGlh//lTcIjcUsPh/d9cbqC5uun0l3v65Hijq7XzlrxOABORVyvJjndp2lsDL3Sns3zTedI2DunHkCQQCLHyIiq/+TnJLEH8ngzk5A4h6MWFIS+HvvtEpFt28+7gLdMm9Shau7DeeQVN9DPR+d9CMxOcrc0siKbyYJwR0xAkEAiGDy6T6GQ1ELLv8J2cWlUUANlQY8gfHpEi7ki/tyiRm6DTBUXtpkMC4gbx4odGmmK5z/LrZ/tmKUJv5ZWHklYQJAWvY2OXlAF+GNzJIESupZG+88jgLJVwIE9storICtSfYRBVOOmeQwTpNezm3PtITogTw5LlxdGVjwKiNWOZZ8YQJAP1W490X5xU4A5+dzKJ88YqqoBVf3Kbo7B7iBAJyQbCI1BspmdckrqB9ZRgpPsBDE6ZqpVA7q9NHMxrb8ACp0NA==
                         PublicKey = "MIGeMA0GCSqGSIb3DQEBAQUAA4GMADCBiAKBgG87C72B1cmqa7lpqeJ4Lad3vrcF04CeWsgndHZi3Ryo+V2oxzPAkbtNIQXhEWyU2CJkcd21KS5wJR0OGpp7P/dOMV4WzE9VrNbh3FVyJeN5ACXA8WWw6K/D3622sa1aUdCZXs3Qzr6bUMXuJvL47PEeO4Xch14/ygUEPhrNnqgpAgMBAAE=",
+                        UserId = Guid.NewGuid()
                     },
                     new User
                     {
@@ -34,6 +35,7 @@ namespace PsswrdMngr.Infrastructure
                         // RSA public key of length 1024 with https://cryptotools.net/rsagen 
                         // RSA private key to go with it: MIICWwIBAAKBgQCno7nbfzDo0jY9iWtBD+BXTkNteCQ1NEq2VBYDNS2KzgPsGHz25M2d4xqfsI1fBImIm5V5ohswjYfu0QeRD5pnKzWL6DgkmeWA2O4cfqu2NQAk3ffLS2Hr88NYgspvgHyVigOndk2J0tRyLZOnrPIF299IVTEQdT+XdDOVXzL5yQIDAQABAoGABp1lRg38xhMVZNQ5UTXpKkjCTF2DQD4x/IPQ4ouEooeCjBxjQfLBUkuVz1tOGMO7EZLiEQyeegn7pSbGX6j39K2aYRySly0tAiPwFjFwazoTPGVuWtu7abHz0P3WeWCPh9Jmj4z2twGNtrLJ/83AiN7g/dv0w4yFP2Lz88IuSQkCQQD3ZyNvXZdulifT7oQ6415UlmjqZmlblMGtOjSrZs49kadvXYg3ovZzRf22Fx0UFiXrY8vDgGCHduN8/fZT9Vb3AkEArXcGLNr45f7Vdgca/AzIFmsSzXrIfIt9S7tV94QtiIUgM8FzCpGhzMZ2ADpatVX48a8WtXbsYuosIA+Jcy5FPwJAeG4uY6Gte1mAnbu3hmrzmj11aNTdaIUrGkYBKYZr0rC6To27J0oeqdJiRGdP8l0trD3yDILLemW3Kzr807XT1QJAMCdXdoI/EBHjDgXA7vFZZifJK3OHTlOmr6xMnA58WWajXtq35doxsVfyj/OjFK3OEsGJK0zdKERbhXbqsCfLHwJAcpP9HFnVNoUAFGNvmWsAp7qh14pwXUdfEuJxwuO0pEiaW85SGvgO8lgIJq2/wdkkTTWiXlyyZk2CJHnUEPavGw==
                         PublicKey = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCno7nbfzDo0jY9iWtBD+BXTkNteCQ1NEq2VBYDNS2KzgPsGHz25M2d4xqfsI1fBImIm5V5ohswjYfu0QeRD5pnKzWL6DgkmeWA2O4cfqu2NQAk3ffLS2Hr88NYgspvgHyVigOndk2J0tRyLZOnrPIF299IVTEQdT+XdDOVXzL5yQIDAQAB",
+                        UserId = Guid.NewGuid()
                     }
                 };
                 
@@ -55,7 +57,7 @@ namespace PsswrdMngr.Infrastructure
             if (!context.CredentialContainers.Any())
             {
                 List<User> users = await context.Users.ToListAsync();
-                Guid uid = Guid.Parse(users[0].Id);
+                Guid uid = users[0].UserId;
 
                 var containers = new List<CredentialContainer>
                 {

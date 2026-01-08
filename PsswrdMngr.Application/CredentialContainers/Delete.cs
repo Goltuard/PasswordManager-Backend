@@ -9,7 +9,6 @@ public class Delete
     public class Command : IRequest<Unit>
     {
         public required Guid Id { get; set; }
-        public required Guid UserId { get; set; }
     }
 
     public class Handler : IRequestHandler<Command, Unit>
@@ -25,12 +24,9 @@ public class Delete
         {
             var credContainer = await _context.CredentialContainers.FindAsync(request.Id);
 
-            if (credContainer.UserId == request.UserId)
-            {
-                _context.Remove(credContainer);
+            _context.Remove(credContainer);
             
-                await _context.SaveChangesAsync(cancellationToken);
-            }
+            await _context.SaveChangesAsync(cancellationToken);
 
             return Unit.Value;
         }

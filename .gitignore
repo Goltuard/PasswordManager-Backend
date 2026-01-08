@@ -517,4 +517,7 @@ http-client.private.env.json
 
 
 # Database
-*.db.vscode/ 
+*.db
+
+# VS Code
+.vscode/
