@@ -1,103 +1,136 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PsswrdMngr.API.Dto;
+using PsswrdMngr.Application.CredentialContainers;
 using PsswrdMngr.Domain;
 using PsswrdMngr.Infrastructure;
-using System.Security.Claims;
+using Single = PsswrdMngr.Application.CredentialContainers.Single;
 
 namespace PsswrdMngr.API.Controllers
 {
-    [Authorize]
-    [ApiController]
-    [Route("api/[controller]")]
-    public class CredentialContainersController : ControllerBase
+    public class CredentialContainersController : BaseApiController
     {
-        private readonly DataContext _context;
+        public CredentialContainersController()
+        { }
 
-        public CredentialContainersController(DataContext context)
+        [HttpGet] // api/credentialcontainers   ??
+        public async Task<ActionResult<List<ContainerDto>>> GetContainers()
         {
-            _context = context;
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            
+            var results = await Mediator.Send(new List.Query{UserId = userId});
+            var dtoResList = new List<ContainerDto>();
+            foreach (var res in results.Value)
+            {
+                dtoResList.Add(new ContainerDto
+                {
+                    ContainerHash = res.ContainerHash,
+                    ContainerString = res.ContainerString,
+                    Id = res.Id
+                });
+            }
+
+            return dtoResList;
         }
 
-        private Guid GetUserId()
+
+        [HttpGet("{id}")] //  api/credentialcontainers/id   ??
+        public async Task<ActionResult<ContainerDto>> GetCredential(Guid id)
         {
-            var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            return Guid.Parse(value);
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await Mediator.Send(new Single.Query { Id = id, UserId = userId});
+            
+            if (result == null || result.Value == null)
+            {
+                return NotFound();
+            }
+            
+            if (result.IsSuccess)
+            {
+                var resultDto = new ContainerDto
+                {
+                    ContainerHash = result.Value.ContainerHash,
+                    ContainerString = result.Value.ContainerString,
+                    Id = result.Value.Id
+                };
+                return Ok(resultDto);
+            }
+
+            if (result.Error == "Unauthorized")
+            {
+                // Return 404 Not Found instead of 401 Unauthorized to prevent database enumeration.
+                // In case of a correctly structured query the API should return only 2 possible values:
+                // 200 OK with the resulting object
+                // 404 Not Found in case the credential container doesn't exist or the authenticated user doesn't have access to it
+                return NotFound();
+            }
+
+            // If the query is incorrect, return 400 Bad Request
+            return BadRequest();
         }
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<CredentialContainer>>> GetAll()
+        [HttpPost] //  api/credentialcontainers
+        public async Task<IActionResult> CreateCredentialContainer(ContainerDto containerDto)
         {
-            var userId = GetUserId();
+            var credentialContainer = new CredentialContainer
+            {
+                Id = Guid.NewGuid(),
+                UserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)),
+                ContainerHash = containerDto.ContainerHash,
+                ContainerString = containerDto.ContainerString
+            };
+            var result = await Mediator.Send(new Create.Command { CredentialContainer = credentialContainer });
+            if (result.IsSuccess)
+            {
+                return Ok();
+            }
 
-            var items = await _context.CredentialContainers
-                .Where(x => x.UserId == userId)
-                .AsNoTracking()
-                .ToListAsync();
-
-            return Ok(items);
+            return BadRequest(result.Error);
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<CredentialContainer>> GetById(Guid id)
+        [HttpPut("{id}")] //  api/credentialcontainers/id
+        public async Task<IActionResult> EditCredentialContainer(Guid id, ContainerDto containerDto)
         {
-            var userId = GetUserId();
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var credentialContainer = new CredentialContainer
+            {
+                Id = id,
+                UserId = userId,
+                ContainerHash = containerDto.ContainerHash,
+                ContainerString = containerDto.ContainerString
+            };
+            var result = await Mediator.Send(new Edit.Command { CredentialContainer = credentialContainer, UserId = userId});
+            if (result.IsSuccess)
+            {
+                return Ok();
+            }
 
-            var item = await _context.CredentialContainers
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
+            if (result.Error == "Not found" || result.Error == "Unauthorized")
+            {
+                return NotFound();
+            }
 
-            if (item == null) return NotFound();
-            return Ok(item);
+            return BadRequest(result.Error);
         }
 
-        [HttpPost]
-        public async Task<ActionResult<CredentialContainer>> Create([FromBody] CredentialContainer model)
+        [HttpDelete("{id}")] // api/credentialcontainers/id
+        public async Task<IActionResult> RemoveCredentialContainer(Guid id)
         {
-            var userId = GetUserId();
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await Mediator.Send(new Delete.Command { Id = id, UserId = userId});
+            if (result.IsSuccess)
+            {
+                return Ok();
+            }
+            
+            if (result.Error == "Not found" || result.Error == "Unauthorized")
+            {
+                return NotFound();
+            }
 
-            if (model.Id == Guid.Empty)
-                model.Id = Guid.NewGuid();
-
-            model.UserId = userId;
-
-            _context.CredentialContainers.Add(model);
-            await _context.SaveChangesAsync();
-
-            return Ok(model);
-        }
-
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] CredentialContainer model)
-        {
-            var userId = GetUserId();
-
-            var existing = await _context.CredentialContainers
-                .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
-
-            if (existing == null) return NotFound();
-
-            existing.ContainerHash = model.ContainerHash;
-            existing.ContainerString = model.ContainerString;
-
-            await _context.SaveChangesAsync();
-            return NoContent();
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(Guid id)
-        {
-            var userId = GetUserId();
-
-            var existing = await _context.CredentialContainers
-                .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
-
-            if (existing == null) return NotFound();
-
-            _context.CredentialContainers.Remove(existing);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            return BadRequest(result.Error);
         }
     }
 }
