@@ -1,84 +1,90 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PsswrdMngr.API.Dto;
+using PsswrdMngr.Application.CredentialContainers;
 using PsswrdMngr.Domain;
 using PsswrdMngr.Infrastructure;
+using Single = PsswrdMngr.Application.CredentialContainers.Single;
 
 namespace PsswrdMngr.API.Controllers
 {
-    [AllowAnonymous]
-    [ApiController]
-    [Route("api/[controller]")]
-    public class CredentialContainersController : ControllerBase
+    public class CredentialContainersController : BaseApiController
     {
-        private readonly DataContext _context;
+        public CredentialContainersController()
+        { }
 
-        public CredentialContainersController(DataContext context)
+        [HttpGet] // api/credentialcontainers   ??
+        public async Task<ActionResult<List<ContainerDto>>> GetContainers()
         {
-            _context = context;
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            
+            var results = await Mediator.Send(new List.Query{UserId = userId});
+            var dtoResList = new List<ContainerDto>();
+            foreach (var res in results)
+            {
+                dtoResList.Add(new ContainerDto
+                {
+                    ContainerHash = res.ContainerHash,
+                    ContainerString = res.ContainerString,
+                    Id = res.Id
+                });
+            }
+
+            return dtoResList;
         }
 
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<CredentialContainer>>> GetAll()
-        {
-            var items = await _context.CredentialContainers
-                .AsNoTracking()
-                .ToListAsync();
 
-            return Ok(items);
+        [HttpGet("{id}")] //  api/credentialcontainers/id   ??
+        public async Task<ActionResult<ContainerDto>> GetCredential(Guid id)
+        {
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var result = await Mediator.Send(new Single.Query { Id = id, UserId = userId});
+            var resultDto = new ContainerDto
+            {
+                ContainerHash = result.ContainerHash,
+                ContainerString = result.ContainerString,
+                Id = result.Id
+            };
+            return resultDto;
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<CredentialContainer>> GetById(Guid id)
+        [HttpPost] //  api/credentialcontainers
+        public async Task<IActionResult> CreateCredentialContainer(ContainerDto containerDto)
         {
-            var item = await _context.CredentialContainers
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == id);
-
-            if (item == null) return NotFound();
-            return Ok(item);
+            var credentialContainer = new CredentialContainer
+            {
+                Id = Guid.NewGuid(),
+                UserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)),
+                ContainerHash = containerDto.ContainerHash,
+                ContainerString = containerDto.ContainerString
+            };
+            await Mediator.Send(new Create.Command { CredentialContainer = credentialContainer });
+            return Ok();
         }
 
-        [HttpPost]
-        public async Task<ActionResult<CredentialContainer>> Create([FromBody] CredentialContainer model)
+        [HttpPut("{id}")] //  api/credentialcontainers/id
+        public async Task<IActionResult> EditCredentialContainer(Guid id, ContainerDto containerDto)
         {
-            if (model.Id == Guid.Empty)
-                model.Id = Guid.NewGuid();
-
-            _context.CredentialContainers.Add(model);
-            await _context.SaveChangesAsync();
-
-            return Ok(model);
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var credentialContainer = new CredentialContainer
+            {
+                Id = id,
+                UserId = userId,
+                ContainerHash = containerDto.ContainerHash,
+                ContainerString = containerDto.ContainerString
+            };
+            await Mediator.Send(new Edit.Command { CredentialContainer = credentialContainer, UserId = userId});
+            return Ok();
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] CredentialContainer model)
+        [HttpDelete("{id}")] // api/credentialcontainers/id
+        public async Task<IActionResult> RemoveCredentialContainer(Guid id)
         {
-            var existing = await _context.CredentialContainers
-                .FirstOrDefaultAsync(x => x.Id == id);
-
-            if (existing == null) return NotFound();
-
-            existing.UserId = model.UserId;
-            existing.ContainerHash = model.ContainerHash;
-            existing.ContainerString = model.ContainerString;
-
-            await _context.SaveChangesAsync();
-            return NoContent();
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(Guid id)
-        {
-            var existing = await _context.CredentialContainers
-                .FirstOrDefaultAsync(x => x.Id == id);
-
-            if (existing == null) return NotFound();
-
-            _context.CredentialContainers.Remove(existing);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            await Mediator.Send(new Delete.Command { Id = id, UserId = userId});
+            return Ok();
         }
     }
 }
