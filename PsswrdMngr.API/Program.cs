@@ -1,91 +1,50 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
 using PsswrdMngr.API.Services;
+using PsswrdMngr.Application.CredentialContainers;
 using PsswrdMngr.Domain;
 using PsswrdMngr.Infrastructure;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(List.Handler).Assembly)
+);
+
+builder.Services.AddIdentityServices(builder.Configuration);
+
+builder.Services.AddControllers(opt =>
+{
+    var policy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+
+    opt.Filters.Add(new AuthorizeFilter(policy));
+});
+
+builder.Services.AddOpenApi();
 
 builder.Services.AddDbContext<DataContext>(opt =>
 {
     opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 
-builder.Services
-    .AddIdentityCore<User>(options =>
-    {
-        options.User.RequireUniqueEmail = true;
-    })
-    .AddEntityFrameworkStores<DataContext>()
-    .AddUserManager<UserManager<User>>()
-    .AddSignInManager<SignInManager<User>>();
-
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("CorsPolicy", policy =>
     {
         policy
-            .AllowAnyOrigin()
+            .WithOrigins(
+                "http://localhost:3000",
+                "http://localhost:3001"
+            )
             .AllowAnyHeader()
             .AllowAnyMethod();
-    });
-});
-
-builder.Services.AddScoped<TokenService>();
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = false,
-            ValidateAudience = false,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["DebugTokenKey"]!)
-            )
-        };
-    });
-
-builder.Services.AddAuthorization();
-
-builder.Services.AddControllers();
-
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "PsswrdMngr.API",
-        Version = "v1"
-    });
-
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "Bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Wpisz: Bearer {twój_token}"
-    });
-
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
     });
 });
 
@@ -93,9 +52,14 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.MapOpenApi();
 }
+
+app.UseSwagger();
+app.UseSwaggerUI(option =>
+{
+    option.SwaggerEndpoint("/swagger/v1/swagger.json", "Backend");
+});
 
 app.UseHttpsRedirection();
 
@@ -105,5 +69,21 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+using var scope = app.Services.CreateScope();
+var services = scope.ServiceProvider;
+
+try
+{
+    var context = services.GetRequiredService<DataContext>();
+    var userManager = services.GetRequiredService<UserManager<User>>();
+    await context.Database.MigrateAsync();
+    // await Seed.SeedData(context, userManager);
+}
+catch (Exception ex)
+{
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "An error occured during migration");
+}
 
 app.Run();

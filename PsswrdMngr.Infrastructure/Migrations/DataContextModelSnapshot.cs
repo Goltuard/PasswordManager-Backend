@@ -200,6 +200,10 @@ namespace PsswrdMngr.Infrastructure.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("PasswordHash")
                         .HasColumnType("TEXT");
 
@@ -218,6 +222,9 @@ namespace PsswrdMngr.Infrastructure.Migrations
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
