@@ -1,5 +1,6 @@
 using FluentValidation;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using PsswrdMngr.Domain;
 using PsswrdMngr.Infrastructure;
 
@@ -32,6 +33,7 @@ public class Edit
 
         public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
         {
+            Console.WriteLine(request.CredentialContainer.Id);
             var credContainer = await _context.CredentialContainers.FindAsync(request.CredentialContainer.Id);
 
             if (credContainer == null)
@@ -41,19 +43,43 @@ public class Edit
 
             if (credContainer.UserId == request.UserId)
             {
+                if (credContainer.ContainerHash == request.CredentialContainer.ContainerHash &&
+                    credContainer.ContainerString == request.CredentialContainer.ContainerString)
+                {
+                    return Result<Unit>.Success(Unit.Value);
+                }
                 credContainer.ContainerHash = request.CredentialContainer.ContainerHash;
                 credContainer.ContainerString = request.CredentialContainer.ContainerString;
 
-                var success = await _context.SaveChangesAsync(cancellationToken) > 0;
-
-                if (!success)
+                try
                 {
-                    return Result<Unit>.Failure("Error removing credentials.");
+                    var success = await _context.SaveChangesAsync(cancellationToken) > 0;
+                    if (!success)
+                    {
+                        return Result<Unit>.Failure("Error editing credentials.");
+                    }
+
+                    return Result<Unit>.Success(Unit.Value);
                 }
-                
-                return Result<Unit>.Success(Unit.Value);
+                catch (DbUpdateConcurrencyException e)
+                {
+                    Console.WriteLine("DbUpdateConcurrency");
+                    Console.WriteLine(e);
+                    Console.WriteLine(e.StackTrace);
+                }
+                catch (DbUpdateException e)
+                {
+                    Console.WriteLine("DbUpdate");
+                    Console.WriteLine(e);
+                    Console.WriteLine(e.StackTrace);
+                }
+                catch (OperationCanceledException e)
+                {
+                    Console.WriteLine("OperationCancelled");
+                    Console.WriteLine(e);
+                    Console.WriteLine(e.StackTrace);
+                }
             }
-            
             return Result<Unit>.Failure("Unauthorized");
         }
     }
