@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using FluentValidation;
 using MediatR;
 using PsswrdMngr.Domain;
@@ -31,6 +33,15 @@ public class Create
 
         public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
         {
+            var hasher = SHA256.Create();
+            var contStringByteArray = Encoding.UTF8.GetBytes(request.CredentialContainer.ContainerString);
+            var hash = hasher.ComputeHash(contStringByteArray);
+            var hashString = Convert.ToHexString(hash);
+
+            if (request.CredentialContainer.ContainerHash != hashString)
+            {
+                return Result<Unit>.Failure("Hash validation failed");
+            }
             _context.CredentialContainers.Add(request.CredentialContainer);
 
             var success = await _context.SaveChangesAsync(cancellationToken) > 0;

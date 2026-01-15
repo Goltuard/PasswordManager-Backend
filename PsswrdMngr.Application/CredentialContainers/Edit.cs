@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -33,7 +35,6 @@ public class Edit
 
         public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
         {
-            Console.WriteLine(request.CredentialContainer.Id);
             var credContainer = await _context.CredentialContainers.FindAsync(request.CredentialContainer.Id);
 
             if (credContainer == null)
@@ -43,6 +44,17 @@ public class Edit
 
             if (credContainer.UserId == request.UserId)
             {
+                
+                var hasher = SHA256.Create();
+                var contStringByteArray = Encoding.UTF8.GetBytes(request.CredentialContainer.ContainerString);
+                var hash = hasher.ComputeHash(contStringByteArray);
+                var hashString = Convert.ToHexString(hash);
+
+                if (request.CredentialContainer.ContainerHash != hashString)
+                {
+                    return Result<Unit>.Failure("Hash validation failed");
+                }
+                
                 if (credContainer.ContainerHash == request.CredentialContainer.ContainerHash &&
                     credContainer.ContainerString == request.CredentialContainer.ContainerString)
                 {
