@@ -65,6 +65,13 @@ namespace PsswrdMngr.API.Controllers
                 PublicKey = registerDto.PublicKey,
             };
 
+            var isEmailTaken = await _userManager.FindByEmailAsync(registerDto.Email) != null;
+
+            if (isEmailTaken)
+            {
+                return BadRequest("Email taken");
+            }
+            
             var result = await _userManager.CreateAsync(user, registerDto.Password);
 
             if (result.Succeeded)
