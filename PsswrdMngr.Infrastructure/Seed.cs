@@ -7,6 +7,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace PsswrdMngr.Infrastructure
 {
+    /// <summary>
+    ///  Test class for initial database testing. Is outdated and no longer compatible with the application
+    /// </summary>
     public class Seed
     {
         public static async Task SeedData(DataContext context, UserManager<User> userManager)

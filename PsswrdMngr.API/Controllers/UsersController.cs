@@ -1,5 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +10,7 @@ using PsswrdMngr.API.Dto;
 using PsswrdMngr.API.Services;
 using PsswrdMngr.Domain;
 using PsswrdMngr.Infrastructure;
+using BCrypt.Net;
 
 namespace PsswrdMngr.API.Controllers
 {
@@ -32,11 +35,12 @@ namespace PsswrdMngr.API.Controllers
 
             if (user == null) return Unauthorized();
 
-            var result = await _userManager.CheckPasswordAsync(user, loginDto.Password);
+            var isValid = BCrypt.Net.BCrypt.Verify(loginDto.Password, user.Password);
+            
+            //var result = await _userManager.CheckPasswordAsync(user, loginDto.Password);
 
-            if (result)
+            if (isValid)
             {
-                Console.WriteLine(user.Id);
                 return new UserDto
                 {
                     Id = Guid.Parse(user.Id),
@@ -56,12 +60,12 @@ namespace PsswrdMngr.API.Controllers
             {
                 return BadRequest("UserName taken.");
             }
-
+            
             var user = new User
             {
                 UserName = registerDto.UserName,
                 Email = registerDto.Email,
-                Password = registerDto.Password,
+                Password = BCrypt.Net.BCrypt.HashPassword(registerDto.Password),
                 PublicKey = registerDto.PublicKey,
             };
 

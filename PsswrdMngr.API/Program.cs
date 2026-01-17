@@ -88,7 +88,8 @@ try
     var context = services.GetRequiredService<DataContext>();
     var userManager = services.GetRequiredService<UserManager<User>>();
     await context.Database.MigrateAsync();
-    await Seed.SeedData(context, userManager);
+    // SeedData is no longer compatible with the app and will produce inaccessible data
+    // await Seed.SeedData(context, userManager);
 }
 catch (Exception ex)
 {
